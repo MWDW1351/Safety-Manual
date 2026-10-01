@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Midwest Drywall Safety Manual Assistant</title>
+<style>
+:root{--bg:#fff;--fg:#1c1c1c;--mut:#666;--card:#f3f3f1;--acc:#b4351c;--bub:#e9eef5}
+@media(prefers-color-scheme:dark){:root{--bg:#161616;--fg:#eee;--mut:#aaa;--card:#242424;--acc:#e0634a;--bub:#26323f}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:16px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;max-width:760px;margin:auto}
+header{padding:12px 16px;border-bottom:1px solid var(--card)}
+h1{font-size:18px;margin:0}
+header p{margin:2px 0 0;font-size:13px;color:var(--mut)}
+.em{background:var(--acc);color:#fff;padding:8px 16px;font-size:14px;font-weight:600}
+#log{flex:1;overflow-y:auto;padding:12px 16px}
+.m{padding:10px 12px;border-radius:12px;margin:8px 0;max-width:92%;white-space:pre-wrap}
+.user{background:var(--bub);margin-left:auto}
+.bot{background:var(--card)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.chips button{border:1px solid var(--acc);color:var(--acc);background:none;border-radius:16px;padding:6px 12px;font-size:14px}
+form{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--card)}
+input{flex:1;font-size:16px;padding:10px;border-radius:8px;border:1px solid var(--mut);background:var(--bg);color:var(--fg)}
+form button{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:0 16px;font-size:16px}
+footer{font-size:12px;color:var(--mut);padding:0 16px 10px}
+footer a{color:var(--acc)}
+</style>
+</head>
+<body>
+<div class="em">Emergency? Call 911 first, then notify the site supervisor.</div>
+<header><h1>Safety Manual Assistant</h1><p>Ask a question; answers come only from the 2026 Employee Safety Manual.</p></header>
+<div id="log">
+  <div class="m bot">What do you need to know? For example:</div>
+  <div class="chips" id="chips"></div>
+</div>
+<form id="f"><input id="q" placeholder="Ask about the manual…" autocomplete="off" maxlength="500"><button>Ask</button></form>
+<footer>AI answers can be wrong. Check the <a href="Midwest_Drywall_Safety_Manual_2026.docx">full manual</a> for anything critical.</footer>
+<script>
+const log=document.getElementById('log'),q=document.getElementById('q'),chips=document.getElementById('chips');
+let history=[],busy=false;
+["When do I need fall protection?","What is the hot work permit process?","How do I report an incident?","What PPE is required for silica dust?"]
+ .forEach(t=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>send(t);chips.appendChild(b)});
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const fmt=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+function add(cls,html){const d=document.createElement('div');d.className='m '+cls;d.innerHTML=html;log.appendChild(d);log.scrollTop=log.scrollHeight;return d}
+async function send(text){
+  if(busy||!text.trim())return;busy=true;chips.remove();q.value='';
+  add('user',esc(text));history.push({role:'user',content:text});
+  const t=add('bot','Searching the manual…');
+  try{
+    const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:history})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||'Error');
+    t.innerHTML=fmt(d.answer);history.push({role:'assistant',content:d.answer});
+  }catch(e){t.textContent=(e.message&&e.message!=='Error'?e.message+' ':'Something went wrong. ')+'For emergencies call 911.';history.pop()}
+  busy=false;log.scrollTop=log.scrollHeight;
+}
+document.getElementById('f').onsubmit=e=>{e.preventDefault();send(q.value)};
+</script>
+</body>
+</html>
